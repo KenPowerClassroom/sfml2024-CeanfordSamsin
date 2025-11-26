@@ -6,6 +6,8 @@ const int tileSize = 18;
 
 #include"../16_SFML_Games/Grid.h"
 #include"../16_SFML_Games/Player.h"
+#include "../16_SFML_Games/arkanoidTestLogic.h"
+#include <gtest/gtest.h>
 
 
 TEST(Grid, HasWallsAndInterior) {
@@ -59,7 +61,7 @@ TEST(Grid, GridsIsFilledWithHorizWall) {
 
 	Grid grid;
 
-	for(int i=1;i<WIDTH-1;i++)
+	for (int i = 1;i < WIDTH - 1;i++)
 		grid.newWall(10, i);
 
 	grid.markConnectedCellsNotToBeFilled(11, 1);
@@ -94,7 +96,7 @@ TEST(Grid, GridsIsFilledWithHorizAndVertWall) {
 
 	for (int x = 1; x < 10; x++)
 		grid.newWall(10, x);
-	for (int y = 10; y < HEIGHT-1; y++)
+	for (int y = 10; y < HEIGHT - 1; y++)
 		grid.newWall(y, 10);
 
 	grid.markConnectedCellsNotToBeFilled(2, 2);
@@ -124,7 +126,7 @@ TEST(Player, ConstrainedHorizontallyRight) {
 		p.move();
 
 	EXPECT_EQ(10, p.y);
-	EXPECT_EQ(WIDTH-1, p.x);
+	EXPECT_EQ(WIDTH - 1, p.x);
 }
 
 TEST(Player, ConstrainedHorizontallyLeft) {
@@ -165,10 +167,47 @@ TEST(Player, ConstrainedDiagonallyFast) {
 	p.dx = 5;
 	p.dy = 6;
 
-	
+
 	for (int i = 0; i < 100; i++)
 		p.move();
 
-	EXPECT_EQ(HEIGHT-1, p.y);
-	EXPECT_EQ(WIDTH-1, p.x);
+	EXPECT_EQ(HEIGHT - 1, p.y);
+	EXPECT_EQ(WIDTH - 1, p.x);
+}
+
+// Arkanoid Game Logic Tests
+
+TEST(BallTests, WallCollisionReversesX) 
+{
+    BallLogicBall ball(0, 100, -5, 0);
+    BallLogic_HandleWallCollision(ball);
+    EXPECT_EQ(ball.dx, 5);
+}
+
+TEST(BallTests, WallCollisionReversesY) 
+{
+    BallLogicBall ball(100, 0, 0, -5);
+    BallLogic_HandleWallCollision(ball);
+    EXPECT_EQ(ball.dy, 5);
+}
+
+TEST(BallTests, BlockCollisionDetected) 
+{
+    BallLogicBall ball(50, 50, 0, -5);
+    sf::FloatRect block(52, 52, 20, 20);
+
+    bool hit = BallLogic_CheckBlockCollision(ball, block);
+
+    EXPECT_TRUE(hit);
+    EXPECT_EQ(ball.dy, 5);
+}
+
+TEST(BallTests, NoCollisionWhenFarAway) 
+{
+    BallLogicBall ball(0, 0, 5, 5);
+    sf::FloatRect block(200, 200, 20, 20);
+
+    bool hit = BallLogic_CheckBlockCollision(ball, block);
+
+    EXPECT_FALSE(hit);
 }

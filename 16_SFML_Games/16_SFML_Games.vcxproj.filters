@@ -63,6 +63,12 @@
     <ClCompile Include="netwalk.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="arkanoidTestLogic.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="arkanoidTestLogic.h">
+      <Filter>Header Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Connector.hpp">
