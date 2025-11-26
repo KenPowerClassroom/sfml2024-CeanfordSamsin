@@ -24,75 +24,75 @@ int arkanoid()
 {
     srand(time(0));
 
-    RenderWindow app(VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "Arkanoid!");
-    app.setFramerateLimit(60);
+    RenderWindow window(VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "Arkanoid!");
+    window.setFramerateLimit(60);
 
-    Texture t1, t2, t3, t4;
-    t1.loadFromFile("images/arkanoid/block01.png");
-    t2.loadFromFile("images/arkanoid/background.jpg");
-    t3.loadFromFile("images/arkanoid/ball.png");
-    t4.loadFromFile("images/arkanoid/paddle.png");
+    Texture blockTexture, backgroundTexture, ballTexture, paddleTexture;
+    blockTexture.loadFromFile("images/arkanoid/block01.png");
+    backgroundTexture.loadFromFile("images/arkanoid/background.jpg");
+    ballTexture.loadFromFile("images/arkanoid/ball.png");
+    paddleTexture.loadFromFile("images/arkanoid/paddle.png");
 
-    Sprite sBackground(t2), sBall(t3), sPaddle(t4);
-    sPaddle.setPosition(PADDLE_START_X, PADDLE_START_Y);
+    Sprite backgroundSprite(backgroundTexture), ballSprite(ballTexture), paddleSprite(paddleTexture);
+    paddleSprite.setPosition(PADDLE_START_X, PADDLE_START_Y);
 
-    Sprite block[1000];
+    Sprite blockSprites[1000];
 
-    int n = 0;
-    for (int i = 1; i <= BLOCK_COLS; i++)
-        for (int j = 1; j <= BLOCK_ROWS; j++)
+    int blockCount = 0;
+    for (int col = 1; col <= BLOCK_COLS; col++)
+        for (int row = 1; row <= BLOCK_ROWS; row++)
         {
-            block[n].setTexture(t1);
-            block[n].setPosition(i * BLOCK_SPACING_X, j * BLOCK_SPACING_Y);
-            n++;
+            blockSprites[blockCount].setTexture(blockTexture);
+            blockSprites[blockCount].setPosition(col * BLOCK_SPACING_X, row * BLOCK_SPACING_Y);
+            blockCount++;
         }
 
-    float dx = BALL_SPEED_X, dy = BALL_SPEED_Y;
-    float x = BALL_START_X, y = BALL_START_Y;
+    float ballDx = BALL_SPEED_X, ballDy = BALL_SPEED_Y;
+    float ballX = BALL_START_X, ballY = BALL_START_Y;
 
-    while (app.isOpen())
+    while (window.isOpen())
     {
-        Event e;
-        while (app.pollEvent(e))
+        Event event;
+        while (window.pollEvent(event))
         {
-            if (e.type == Event::Closed)
-                app.close();
+            if (event.type == Event::Closed)
+                window.close();
         }
 
-        x += dx;
-        for (int i = 0; i < n; i++)
-            if (FloatRect(x + 3, y + 3, 6, 6).intersects(block[i].getGlobalBounds()))
+        ballX += ballDx;
+        for (int i = 0; i < blockCount; i++)
+            if (FloatRect(ballX + 3, ballY + 3, 6, 6).intersects(blockSprites[i].getGlobalBounds()))
             {
-                block[i].setPosition(-100, 0); dx = -dx;
+                blockSprites[i].setPosition(-100, 0); ballDx = -ballDx;
             }
 
-        y += dy;
-        for (int i = 0; i < n; i++)
-            if (FloatRect(x + 3, y + 3, 6, 6).intersects(block[i].getGlobalBounds()))
+        ballY += ballDy;
+        for (int i = 0; i < blockCount; i++)
+            if (FloatRect(ballX + 3, ballY + 3, 6, 6).intersects(blockSprites[i].getGlobalBounds()))
             {
-                block[i].setPosition(-100, 0); dy = -dy;
+                blockSprites[i].setPosition(-100, 0); ballDy = -ballDy;
             }
 
-        if (x<0 || x>WINDOW_WIDTH)  dx = -dx;
-        if (y<0 || y>WINDOW_HEIGHT) dy = -dy;
+        if (ballX<0 || ballX>WINDOW_WIDTH)  ballDx = -ballDx;
+        if (ballY<0 || ballY>WINDOW_HEIGHT) ballDy = -ballDy;
 
-        if (Keyboard::isKeyPressed(Keyboard::Right)) sPaddle.move(PADDLE_SPEED, 0);
-        if (Keyboard::isKeyPressed(Keyboard::Left))  sPaddle.move(-PADDLE_SPEED, 0);
+        if (Keyboard::isKeyPressed(Keyboard::Right)) paddleSprite.move(PADDLE_SPEED, 0);
+        if (Keyboard::isKeyPressed(Keyboard::Left))  paddleSprite.move(-PADDLE_SPEED, 0);
 
-        if (FloatRect(x, y, BALL_SIZE, BALL_SIZE).intersects(sPaddle.getGlobalBounds()))
-            dy = -(rand() % 5 + 2);
+        if (FloatRect(ballX, ballY, BALL_SIZE, BALL_SIZE).intersects(paddleSprite.getGlobalBounds()))
+            ballDy = -(rand() % 5 + 2);
 
-        sBall.setPosition(x, y);
+        ballSprite.setPosition(ballX, ballY);
 
-        app.clear();
-        app.draw(sBackground);
-        app.draw(sBall);
-        app.draw(sPaddle);
+        window.clear();
+        window.draw(backgroundSprite);
+        window.draw(ballSprite);
+        window.draw(paddleSprite);
 
-        for (int i = 0; i < n; i++)
-            app.draw(block[i]);
+        for (int i = 0; i < blockCount; i++)
+            window.draw(blockSprites[i]);
 
-        app.display();
+        window.display();
     }
 
     return 0;
