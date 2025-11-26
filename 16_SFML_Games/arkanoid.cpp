@@ -21,76 +21,99 @@ const float PADDLE_START_X = 300.f;
 const float PADDLE_START_Y = 440.f;
 const float PADDLE_SPEED = 6.f;
 
-static FloatRect getBallHitbox(float x, float y)
-{
-    // A smaller inner hitbox used for block collision detection
-    return FloatRect(x + 3.f, y + 3.f, 6.f, 6.f);
-}
+// Ball object
+struct Ball {
+    float x, y;
+    float dx, dy;
+    Sprite sprite;
 
-static FloatRect getBallBounds(float x, float y)
-{
-    // Full size of the ball used for paddle collision
-    return FloatRect(x, y, BALL_SIZE, BALL_SIZE);
-}
+    Ball(float startX, float startY, float speedX, float speedY, const Texture& texture)
+        : x(startX), y(startY), dx(speedX), dy(speedY), sprite(texture) {
+    }
 
-void handleBallBlockCollision(float ballX, float ballY, float& ballSpeed,
-    Sprite blockSprites[], int blockCount)
-{
-    FloatRect ballHitbox = getBallHitbox(ballX, ballY);
+    FloatRect getHitbox() const {
+        // A smaller inner hitbox used for block collision detection
+        return FloatRect(x + 3.f, y + 3.f, 6.f, 6.f);
+    }
+
+    FloatRect getBounds() const {
+        // Full size of the ball used for paddle collision
+        return FloatRect(x, y, BALL_SIZE, BALL_SIZE);
+    }
+
+    void updateSprite() {
+        sprite.setPosition(x, y);
+    }
+};
+
+// Paddle object
+struct Paddle {
+    Sprite sprite;
+
+    Paddle(float startX, float startY, const Texture& texture) : sprite(texture) {
+        sprite.setPosition(startX, startY);
+    }
+
+    void moveLeft() {
+        sprite.move(-PADDLE_SPEED, 0);
+    }
+
+    void moveRight() {
+        sprite.move(PADDLE_SPEED, 0);
+    }
+
+    FloatRect getBounds() const {
+        return sprite.getGlobalBounds();
+    }
+};
+
+// Handle ball–block collisions (affects dx or dy)
+void handleBallBlockCollision(Ball& ball, Sprite blockSprites[], int blockCount, bool horizontal) {
+    FloatRect ballHitbox = ball.getHitbox();
 
     // Loop through all blocks to see if the ball hit one
-    for (int i = 0; i < blockCount; i++)
-    {
+    for (int i = 0; i < blockCount; i++) {
         const FloatRect blockBounds = blockSprites[i].getGlobalBounds();
 
         // If the ball intersects this block, the block "breaks"
-        if (ballHitbox.intersects(blockBounds))
-        {
+        if (ballHitbox.intersects(blockBounds)) {
             blockSprites[i].setPosition(-100, 0); // move block offscreen
-            ballSpeed = -ballSpeed; // bounce in opposite direction
-            return;
+            if (horizontal)
+                ball.dx = -ball.dx;  // bounce horizontally
+            else
+                ball.dy = -ball.dy;  // bounce vertically
+            return; // only one bounce per frame
         }
     }
 }
 
-void handleWallCollision(float ballX, float ballY, float& ballDx, float& ballDy)
-{
-    bool hitLeftOrRight = (ballX < 0 || ballX > WINDOW_WIDTH);
-    bool hitTopOrBottom = (ballY < 0 || ballY > WINDOW_HEIGHT);
-
+// handle bouncing from window borders
+void handleWallCollision(Ball& ball) {
     // Bounce horizontally
-    if (hitLeftOrRight)
-        ballDx = -ballDx;
-
+    if (ball.x < 0 || ball.x > WINDOW_WIDTH)  ball.dx = -ball.dx;
     // Bounce vertically
-    if (hitTopOrBottom)
-        ballDy = -ballDy;
+    if (ball.y < 0 || ball.y > WINDOW_HEIGHT) ball.dy = -ball.dy;
 }
 
-void updatePaddleMovement(Sprite& paddleSprite)
-{
+// handle user input for paddle movement
+void updatePaddleMovement(Paddle& paddle) {
     // Move paddle right
     if (Keyboard::isKeyPressed(Keyboard::Right))
-        paddleSprite.move(PADDLE_SPEED, 0);
+        paddle.moveRight();
 
     // Move paddle left
     if (Keyboard::isKeyPressed(Keyboard::Left))
-        paddleSprite.move(-PADDLE_SPEED, 0);
+        paddle.moveLeft();
 }
 
-void handlePaddleCollision(float ballX, float ballY, float& ballDy,
-    const Sprite& paddleSprite)
-{
-    FloatRect ballBounds = getBallBounds(ballX, ballY);
-    FloatRect paddleBounds = paddleSprite.getGlobalBounds();
-
+// handle paddle–ball collision
+void handlePaddleCollision(Ball& ball, const Paddle& paddle) {
     // If the ball hits the paddle, bounce upward
-    if (ballBounds.intersects(paddleBounds))
-        ballDy = -(rand() % 5 + 2); // random upward angle
+    if (ball.getBounds().intersects(paddle.getBounds()))
+        ball.dy = -(rand() % 5 + 2); // random upward angle
 }
 
-int arkanoid()
-{
+int arkanoid() {
     srand(time(0));
 
     RenderWindow window(VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "Arkanoid!");
@@ -103,19 +126,17 @@ int arkanoid()
     paddleTexture.loadFromFile("images/arkanoid/paddle.png");
 
     Sprite backgroundSprite(backgroundTexture);
-    Sprite ballSprite(ballTexture);
-    Sprite paddleSprite(paddleTexture);
 
-    paddleSprite.setPosition(PADDLE_START_X, PADDLE_START_Y);
+    // Create objects
+    Ball ball(BALL_START_X, BALL_START_Y, BALL_SPEED_X, BALL_SPEED_Y, ballTexture);
+    Paddle paddle(PADDLE_START_X, PADDLE_START_Y, paddleTexture);
 
     Sprite blockSprites[1000];
     int blockCount = 0;
 
     // Create a 10x10 grid of blocks
-    for (int col = 1; col <= BLOCK_COLS; col++)
-    {
-        for (int row = 1; row <= BLOCK_ROWS; row++)
-        {
+    for (int col = 1; col <= BLOCK_COLS; col++) {
+        for (int row = 1; row <= BLOCK_ROWS; row++) {
             blockSprites[blockCount].setTexture(blockTexture);
             blockSprites[blockCount].setPosition(
                 col * BLOCK_SPACING_X,
@@ -125,50 +146,39 @@ int arkanoid()
         }
     }
 
-    float ballDx = BALL_SPEED_X;
-    float ballDy = BALL_SPEED_Y;
-    float ballX = BALL_START_X;
-    float ballY = BALL_START_Y;
-
-    while (window.isOpen())
-    {
+    while (window.isOpen()) {
         Event event;
 
         // Process window events
-        while (window.pollEvent(event))
-        {
+        while (window.pollEvent(event)) {
             if (event.type == Event::Closed)  // user closed the window
                 window.close();
         }
 
-        // Move ball horizontally
-        ballX += ballDx;
+        // Move ball horizontally and check collisions
+        ball.x += ball.dx;
+        handleBallBlockCollision(ball, blockSprites, blockCount, true);
 
-        // Check block collisions in X direction
-        handleBallBlockCollision(ballX, ballY, ballDx, blockSprites, blockCount);
-
-        // Move ball vertically
-        ballY += ballDy;
-
-        // Check block collisions in Y direction
-        handleBallBlockCollision(ballX, ballY, ballDy, blockSprites, blockCount);
+        // Move ball vertically and check collisions
+        ball.y += ball.dy;
+        handleBallBlockCollision(ball, blockSprites, blockCount, false);
 
         // Bounce off walls (edges of the screen)
-        handleWallCollision(ballX, ballY, ballDx, ballDy);
+        handleWallCollision(ball);
 
         // Move paddle left/right depending on key input
-        updatePaddleMovement(paddleSprite);
+        updatePaddleMovement(paddle);
 
         // Bounce ball off the paddle if they intersect
-        handlePaddleCollision(ballX, ballY, ballDy, paddleSprite);
+        handlePaddleCollision(ball, paddle);
 
         // Update ball sprite position to match physics
-        ballSprite.setPosition(ballX, ballY);
+        ball.updateSprite();
 
         window.clear();
         window.draw(backgroundSprite);
-        window.draw(ballSprite);
-        window.draw(paddleSprite);
+        window.draw(ball.sprite);
+        window.draw(paddle.sprite);
 
         // Draw every active block
         for (int i = 0; i < blockCount; i++)
